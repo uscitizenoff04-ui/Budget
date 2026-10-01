@@ -48,11 +48,11 @@ function undo(id){const i=S.tx.findIndex(x=>x.id===id);if(i<0)return;const x=S.t
  S.tx.splice(i,1);save();toast("Отменено");render()}
 function shift(d){let[y,m]=ym.split("-").map(Number);m+=d;if(m>12){m=1;y++}if(m<1){m=12;y--}ym=y+"-"+pad(m);render()}
 function view(){
- if(tab==="home"){const l=mt(),inc=sum(l,"доход"),ex=sum(l,"расход"),ld=sum(l,"отложено"),bal=inc-ex-ld;
+ if(tab==="home"){const l=mt(),inc=sum(l,"доход"),ex=sum(l,"расход"),ld=sum(l,"отложено"),bal=inc-ex;
   const mn=new Date(ym+"-01").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
   let h=`<div class="row"><button class="s" onclick="shift(-1)">‹</button><b>${mn}</b><button class="s" onclick="shift(1)">›</button></div>
   <div class="card" style="margin-top:12px"><div class="mute">Остаток за месяц</div><div class="big ${bal<0?"neg":""}">${money(bal)}</div>
-  <div class="row mute" style="margin-top:8px"><span>Доходы <b class="pos">${money(inc)}</b></span><span>Расходы <b>${money(ex)}</b></span><span>Отложено <b style="color:var(--gold)">${money(ld)}</b></span></div></div>${ytd()}<h2>Расходы по категориям</h2>`;
+  <div class="row mute" style="margin-top:8px"><span>Доходы <b class="pos">${money(inc)}</b></span><span>Расходы <b>${money(ex)}</b></span><span>Отложено <b style="color:var(--gold)">${money(ld)}</b></span></div></div>${ytd()}${incBlock(l)}<h2>Расходы по категориям</h2>`;
   CATS.forEach(c=>{const f=l.filter(x=>x.t==="расход"&&x.c===c).reduce((a,x)=>a+x.a,0),p=S.plan[c]||0;if(!f&&!p)return;
    h+=`<div class="card"><div class="row"><span>${c}</span><span class="${p&&f>p?"neg":""}">${money(f)}${p?` <span class="mute">/ ${money(p)}</span>`:""}</span></div>${p?`<div class="bar"><i class="${f>p?"o":""}" style="width:${Math.min(100,f/p*100)}%"></i></div>`:""}</div>`});
   if(!l.length)h+=`<div class="card mute">Пока пусто. Добавь первую трату на вкладке «Внести».</div>`;if(S.tx.length&&Date.now()-(S.lastBk||0)>12096e5)h+=`<div class="card mute">Копия не обновлялась больше двух недель: вкладка «План», «Резервная копия».</div>`;return h}
@@ -97,6 +97,8 @@ function chart(){const y=yr(),I=[],E=[];for(let m=1;m<=12;m++){I.push(mSum(y,m,"
  const mx=Math.max(1,...I,...E);let g=`<svg viewBox="0 0 360 145" style="width:100%">`;
  for(let i=0;i<12;i++){const x=6+i*29,hi=I[i]/mx*110,he=E[i]/mx*110;g+=`<rect x="${x}" y="${120-hi}" width="11" height="${hi}" rx="2" fill="var(--acc)"/><rect x="${x+12}" y="${120-he}" width="11" height="${he}" rx="2" fill="var(--neg)"/><text x="${x+11}" y="136" font-size="9" text-anchor="middle" fill="var(--mute)">${MN[i]}</text>`}
  return g+`</svg><div class="mute">Зелёные — доходы, красные — расходы</div>`}
+function incBlock(l){const m={};l.filter(x=>x.t==="доход").forEach(x=>m[x.c]=(m[x.c]||0)+x.a);const k=Object.keys(m).sort((a,b)=>m[b]-m[a]);
+ return k.length?`<h2>Доходы по статьям</h2>`+k.map(c=>`<div class="card row"><span>${esc(c)}</span><b class="pos">${money(m[c])}</b></div>`).join(""):""}
 function ytd(){const y=yr(),l=S.tx.filter(x=>x.d.slice(0,4)===y),i=sum(l,"доход"),e=sum(l,"расход");
  return `<div class="card"><div class="mute">С начала ${y} года</div><div class="row" style="margin-top:6px"><span>Доходы <b class="pos">${money(i)}</b></span><span>Расходы <b>${money(e)}</b></span></div><div class="row" style="margin-top:6px"><span>Баланс <b>${money(i-e)}</b></span><span>Норма сбережений <b>${i?Math.round((i-e)/i*100):0}%</b></span></div></div><div class="card">${chart()}</div>`}
 function analytics(){const y=+yr(),m=+ym.slice(5),py=m===1?y-1:y,pm=m===1?12:m-1;let h=`<h2>Сравнение с прошлым месяцем</h2><div class="card">`,any=0;
