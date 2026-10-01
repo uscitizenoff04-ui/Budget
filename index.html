@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Бюджет</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1F3EF;--card:#fff;--ink:#1B2A2F;--mute:#66767A;--acc:#0F7B6C;--neg:#B4432F;--gold:#B9801A;--line:#DCE2DD;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121A1C;--card:#1B2628;--ink:#E8EEEA;--mute:#8FA0A3;--acc:#3CC4AE;--neg:#F07F66;--gold:#E0AE4A;--line:#2B393C}}
+:root[data-theme="dark"]{--bg:#121A1C;--card:#1B2628;--ink:#E8EEEA;--mute:#8FA0A3;--acc:#3CC4AE;--neg:#F07F66;--gold:#E0AE4A;--line:#2B393C}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 Onest,system-ui,sans-serif;padding-bottom:78px}
+main{max-width:520px;margin:0 auto;padding:14px}
+h2{font-size:15px;margin:22px 0 8px;font-weight:600;color:var(--mute)}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--line)}
+.big{font-size:38px;font-weight:800;letter-spacing:-1px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mute{color:var(--mute);font-size:14px}.pos{color:var(--acc)}.neg{color:var(--neg)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}.bar i.o{background:var(--neg)}
+nav{position:fixed;left:0;right:0;bottom:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;background:none;color:var(--mute);padding:12px 0;font:600 13px Onest,sans-serif}nav button.on{color:var(--acc)}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px;margin:4px 0}
+button.b{width:100%;border:0;border-radius:10px;background:var(--acc);color:var(--bg);font:600 16px Onest,sans-serif;padding:13px;margin-top:6px}
+button.s{border:1px solid var(--line);background:none;color:var(--ink);border-radius:8px;padding:7px 10px;font:600 13px Onest,sans-serif}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chips button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:8px 12px;font:400 14px Onest,sans-serif}.chips button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.seg{display:flex;gap:6px}.seg button{flex:1}
+.inl{display:flex;gap:6px;margin-top:8px}.inl input{margin:0}
+#t{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:14px;display:none}
+</style></head><body><main id="m"></main><div id="t"></div>
+<nav id="nv"></nav>
+<script>
+const CATS=["Здоровье и красота","Рестораны / фастфуд","Развлечения","Транспорт","Дом и хозяйство","Продукты","ЖКХ","Интернет и связь","Аренда жилья","Покупки / товары","Одежда","Цифровые покупки"];
+const INC=["ЗП","Доход от инвестиций","Помощь","Кешбек","Другое"];
+const def=()=>({plan:{},tx:[],goals:[],sav:{"Подушка безопасности":0,"Инвестиции":0,"Вклад":0}});
+let S;try{S=JSON.parse(localStorage.getItem("budget1"))||def()}catch(e){S=def()}
+const save=()=>{S.updated=Date.now();try{localStorage.setItem("budget1",JSON.stringify(S))}catch(e){toast("Не удалось сохранить")}push()};
+const $=s=>document.querySelector(s),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const money=n=>Math.round(n).toLocaleString("ru-RU")+" ₽",num=v=>{const x=parseFloat(String(v).replace(/\s/g,"").replace(",","."));return isNaN(x)||x<=0?null:x};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const now=new Date(),pad=n=>String(n).padStart(2,"0");
+let tab="home",ym=now.getFullYear()+"-"+pad(now.getMonth()+1),kind="расход",cat=CATS[0];
+function toast(x){const t=$("#t");t.textContent=x;t.style.display="block";setTimeout(()=>t.style.display="none",2200)}
+const mt=()=>S.tx.filter(x=>x.d.slice(0,7)===ym);
+const sum=(l,t)=>l.filter(x=>x.t===t).reduce((a,x)=>a+x.a,0);
+function addTx(t,c,a,n,r){S.tx.push({id:uid(),d:now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate()),t,c,a,n:n||"",r:r||""});save()}
+function undo(id){const i=S.tx.findIndex(x=>x.id===id);if(i<0)return;const x=S.tx[i];
+ if(x.r[0]==="g"){const g=S.goals.find(g=>g.id===x.r.slice(2));if(g){g.saved=Math.max(0,g.saved-x.a);g.done=false}}
+ if(x.r[0]==="s")S.sav[x.r.slice(2)]=Math.max(0,(S.sav[x.r.slice(2)]||0)-x.a);
+ S.tx.splice(i,1);save();toast("Отменено");render()}
+function shift(d){let[y,m]=ym.split("-").map(Number);m+=d;if(m>12){m=1;y++}if(m<1){m=12;y--}ym=y+"-"+pad(m);render()}
+function view(){
+ if(tab==="home"){const l=mt(),inc=sum(l,"доход"),ex=sum(l,"расход"),ld=sum(l,"отложено"),bal=inc-ex-ld;
+  const mn=new Date(ym+"-01").toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
+  let h=`<div class="row"><button class="s" onclick="shift(-1)">‹</button><b>${mn}</b><button class="s" onclick="shift(1)">›</button></div>
+  <div class="card" style="margin-top:12px"><div class="mute">Остаток за месяц</div><div class="big ${bal<0?"neg":""}">${money(bal)}</div>
+  <div class="row mute" style="margin-top:8px"><span>Доходы <b class="pos">${money(inc)}</b></span><span>Расходы <b>${money(ex)}</b></span><span>Отложено <b style="color:var(--gold)">${money(ld)}</b></span></div></div><h2>Расходы по категориям</h2>`;
+  CATS.forEach(c=>{const f=l.filter(x=>x.t==="расход"&&x.c===c).reduce((a,x)=>a+x.a,0),p=S.plan[c]||0;if(!f&&!p)return;
+   h+=`<div class="card"><div class="row"><span>${c}</span><span class="${p&&f>p?"neg":""}">${money(f)}${p?` <span class="mute">/ ${money(p)}</span>`:""}</span></div>${p?`<div class="bar"><i class="${f>p?"o":""}" style="width:${Math.min(100,f/p*100)}%"></i></div>`:""}</div>`});
+  if(!l.length)h+=`<div class="card mute">Пока пусто. Добавь первую трату на вкладке «Внести».</div>`;if(S.tx.length&&Date.now()-(S.lastBk||0)>12096e5)h+=`<div class="card mute">Копия не обновлялась больше двух недель: вкладка «План», «Резервная копия».</div>`;return h}
+ if(tab==="add"){const L=kind==="расход"?CATS:INC;if(!L.includes(cat))cat=L[0];
+  return `<div class="seg"><button class="${kind==="расход"?"b":"s"}" onclick="kind='расход';render()">Расход</button><button class="${kind==="доход"?"b":"s"}" onclick="kind='доход';render()">Доход</button></div>
+  <div class="chips">${L.map(c=>`<button class="${c===cat?"on":""}" onclick="cat='${c}';render()">${c}</button>`).join("")}</div>
+  <input id="a" inputmode="decimal" placeholder="Сумма, ₽"><input id="n" placeholder="Комментарий (необязательно)">
+  <button class="b" onclick="addNow()">Сохранить ${kind}</button>`}
+ if(tab==="goals"){let h=`<h2>Цели</h2>`;
+  S.goals.forEach(g=>{const left=Math.max(0,g.amt-g.saved);h+=`<div class="card"><div class="row"><b>${esc(g.n)}</b><span class="mute">${g.type}${g.date?", до "+g.date:""}</span></div>
+   <div class="row mute"><span>${money(g.saved)} из ${money(g.amt)}</span><span>${g.done||!left?"✓ готово":"осталось "+money(left)}</span></div><div class="bar"><i style="width:${Math.min(100,g.saved/g.amt*100)}%"></i></div>
+   <div class="inl"><input id="g${g.id}" inputmode="decimal" placeholder="Отложить, ₽"><button class="s" onclick="putG('${g.id}')">Отложить</button></div>
+   <div class="inl"><button class="s" onclick="closeG('${g.id}')">Закрыть</button><button class="s" onclick="delG('${g.id}')">Удалить</button></div></div>`});
+  h+=`<div class="card"><b>Новая цель</b><input id="gn" placeholder="Название"><select id="gt"><option>разовая</option><option>ежемесячная</option></select><input id="ga" inputmode="decimal" placeholder="Сумма, ₽"><input id="gd" type="date"><button class="b" onclick="newG()">Создать цель</button></div><h2>Накопления</h2>`;
+  Object.keys(S.sav).forEach((k,i)=>{h+=`<div class="card"><div class="row"><span>${k}</span><input style="width:130px;text-align:right" inputmode="decimal" placeholder="0" value="${S.sav[k]||""}" onchange="S.sav[Object.keys(S.sav)[${i}]]=num(this.value)||0;save()"></div><div class="inl"><input id="s${i}" inputmode="decimal" placeholder="Пополнить, ₽"><button class="s" onclick="putS(${i})">Пополнить</button></div></div>`});return h}
+ if(tab==="hist"){const l=[...mt()].reverse();let h=`<h2>Операции за месяц</h2>`;
+  l.forEach(x=>{h+=`<div class="card row"><div><div>${esc(x.c)}${x.n?` <span class="mute">· ${esc(x.n)}</span>`:""}</div><div class="mute">${x.d.split("-").reverse().join(".")} · ${x.t}</div></div><div style="text-align:right"><b class="${x.t==="доход"?"pos":""}">${x.t==="доход"?"+":"−"}${money(x.a)}</b><br><button class="s" onclick="undo('${x.id}')">Отменить</button></div></div>`});
+  return h+(l.length?"":`<div class="card mute">Операций нет.</div>`)}
+ let h=`<h2>План расходов на месяц, ₽</h2><div class="card">`;
+ CATS.forEach((c,i)=>h+=`<div class="row"><span>${c}</span><input style="width:110px;text-align:right" inputmode="decimal" value="${S.plan[c]||""}" onchange="S.plan[CATS[${i}]]=num(this.value)||0;save()"></div>`);
+ return h+`</div><h2>Синхронизация с Google Таблицей</h2><div class="card"><input placeholder="Адрес веб-приложения (…/exec)" value="${esc(SY.url||"")}" onchange="SY.url=this.value.trim()"><input placeholder="Пароль из скрипта" value="${esc(SY.token||"")}" onchange="SY.token=this.value.trim()"><button class="b" onclick="saveSY()">Подключить и синхронизировать</button><div id="st" class="mute" style="margin-top:8px">${esc(st)}</div></div><h2>Перенос из Google Таблицы</h2><div class="card"><div class="mute">Открой лист «Транзакции», выдели всё, скопируй и вставь сюда. Импортируй один раз, иначе операции задвоятся.</div><textarea id="im" rows="4"></textarea><button class="s" onclick="importTx()">Импортировать</button></div><h2>Резервная копия</h2><div class="card"><div class="mute">Данные хранятся только в этом браузере. Скопируй текст и сохрани в заметки, чтобы не потерять.</div><textarea id="bk" rows="4"></textarea>
+ <div class="inl"><button class="s" onclick="S.lastBk=Date.now();save();bk.value=JSON.stringify(S);bk.select();try{navigator.clipboard.writeText(bk.value);toast('Скопировано')}catch(e){}">Скопировать копию</button><button class="s" onclick="restore()">Восстановить из текста</button></div></div>`}
+function addNow(){const a=num($("#a").value);if(!a)return toast("Введи сумму числом");addTx(kind,cat,a,$("#n").value);toast("Сохранено: "+cat+" "+money(a));tab="home";render()}
+function putG(id){const a=num($("#g"+id).value);if(!a)return toast("Введи сумму");const g=S.goals.find(g=>g.id===id);g.saved+=a;addTx("отложено",g.n,a,"","g:"+id);toast("Отложено");render()}
+function putS(i){const k=Object.keys(S.sav)[i],a=num($("#s"+i).value);if(!a)return toast("Введи сумму");S.sav[k]+=a;addTx("отложено",k,a,"","s:"+k);toast("Пополнено");render()}
+function closeG(id){const g=S.goals.find(g=>g.id===id);g.saved=g.amt;g.done=true;save();render()}
+function delG(id){S.goals=S.goals.filter(g=>g.id!==id);save();render()}
+function newG(){const n=$("#gn").value.trim(),a=num($("#ga").value);if(!n||!a)return toast("Нужны название и сумма");S.goals.push({id:uid(),n,type:$("#gt").value,amt:a,date:$("#gd").value.split("-").reverse().join("."),saved:0,done:false});save();render()}
+function restore(){try{const d=JSON.parse($("#bk").value);if(!d.tx||!d.plan)throw 0;S=d;save();toast("Восстановлено");tab="home";render()}catch(e){toast("Текст копии не распознан")}}
+let SY;try{SY=JSON.parse(localStorage.getItem("budget_sync"))||{}}catch(e){SY={}}
+let st="",tm;
+function setSt(x){st=x;const e=$("#st");if(e)e.textContent=x}
+function saveSY(){try{localStorage.setItem("budget_sync",JSON.stringify(SY))}catch(e){}pull(true)}
+function push(){if(!SY.url)return;clearTimeout(tm);tm=setTimeout(async()=>{setSt("Сохраняю в таблицу…");try{const r=await fetch(SY.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({token:SY.token,json:JSON.stringify(S)})});const j=await r.json();setSt(j.ok?"Сохранено в таблице":"Ошибка: "+(j.error==="auth"?"неверный пароль":"не записалось"))}catch(e){setSt("Нет связи с таблицей")}},1500)}
+async function pull(force){if(!SY.url)return;setSt("Проверяю таблицу…");try{const r=await fetch(SY.url+"?token="+encodeURIComponent(SY.token||""));const j=await r.json();if(j.error)return setSt("Неверный пароль");
+ if(j.json){const d=JSON.parse(j.json);if((d.updated||0)>(S.updated||0)){S=d;try{localStorage.setItem("budget1",JSON.stringify(S))}catch(e){}render();return setSt("Загружено из таблицы")}}
+ if(force||(S.updated||0)>0){push();setSt("Подключено")}}catch(e){setSt("Не удалось связаться с таблицей")}}
+function render(){const T={home:"Месяц",add:"Внести",goals:"Цели",hist:"История",set:"План"};
+ $("#nv").innerHTML=Object.keys(T).map(k=>`<button class="${k===tab?"on":""}" onclick="tab='${k}';render()">${T[k]}</button>`).join("");$("#m").innerHTML=view();scrollTo(0,0)}
+function importTx(){let n=0;$("#im").value.split(/\r?\n/).forEach(r=>{const c=(r.includes("\t")?r.split("\t"):r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)).map(x=>x.trim().replace(/^"|"$/g,""));
+ const m=(c[0]||"").match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/),a=num(c[3]||"");if(!m||!a)return;
+ const t=(c[1]||"").toLowerCase(),ty=t.startsWith("доход")?"доход":t.startsWith("отлож")?"отложено":t.startsWith("расх")?"расход":null;if(!ty)return;
+ S.tx.push({id:uid(),d:(m[3].length==2?"20"+m[3]:m[3])+"-"+pad(m[2])+"-"+pad(m[1]),t:ty,c:c[2]||"",a,n:c[4]||"",r:""});n++});save();toast("Импортировано операций: "+n);render()}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+render();pull();
+</script></body></html>
